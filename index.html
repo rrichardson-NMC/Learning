@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Course Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Add MathJax for LaTeX rendering -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .chat-container { height: calc(100vh - 250px); min-height: 400px; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .typing-indicator span {
+            display: inline-block; width: 6px; height: 6px; background-color: #9ca3af; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+<div class="max-w-7xl mx-auto p-4 md:p-6 h-screen flex flex-col">
+    
+    <header class="mb-6 flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div>
+            <h1 class="text-2xl font-bold text-indigo-700">Course AI Tutor</h1>
+            <p class="text-sm text-gray-500">Your personalized study assistant</p>
+        </div>
+        <button onclick="toggleTeacherMode()" id="teacherToggleBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-semibold transition border border-gray-200">
+            ⚙️ Teacher Setup
+        </button>
+    </header>
+
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 overflow-hidden pb-4">
+        
+        <!-- Left/Main Column: Chat Interface -->
+        <div class="lg:col-span-2 flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative" id="chatPanel">
+            
+            <!-- Chat Messages Area -->
+            <div id="chatBox" class="flex-1 p-6 overflow-y-auto chat-container space-y-4">
+                <!-- Welcome Message -->
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <span class="text-indigo-600 text-lg">🤖</span>
+                    </div>
+                    <div class="bg-indigo-50 text-gray-800 p-4 rounded-2xl rounded-tl-none max-w-[85%] shadow-sm">
+                        <p>Hello! I am your AI Course Tutor. Feel free to ask me any questions about the course material, syllabus, or concepts we are learning!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 bg-white border-t border-gray-100">
+                <form id="chatForm" class="flex gap-2">
+                    <input type="text" id="userInput" placeholder="Ask a question about the course..." 
+                           class="flex-1 border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                           autocomplete="off">
+                    <button type="submit" id="sendBtn" class="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition font-medium shadow-sm flex items-center gap-2">
+                        Send
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column: Teacher Setup (Hidden by default on mobile) -->
+        <div id="teacherPanel" class="hidden lg:flex flex-col bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden h-full">
+            <div class="p-4 border-b border-slate-200 bg-slate-100 flex justify-between items-center">
+                <h2 class="font-bold text-slate-800">Teacher Knowledge Base</h2>
+                <button onclick="toggleTeacherMode()" class="lg:hidden text-slate-500 hover:text-slate-800 text-xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-4 flex-1 overflow-y-auto">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Tutor Persona / Instructions</label>
+                    <p class="text-xs text-slate-500 mb-2">Tell the AI how to behave (e.g., "Socratic method", "Friendly and brief").</p>
+                    <textarea id="systemPrompt" rows="5" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">Act as a helpful, encouraging, and knowledgeable tutor for this course. Do not give direct answers to assignments; instead, guide the student to the answer using the Socratic method. Rely on the provided course materials to answer questions accurately. 
+IMPORTANT: Format ALL mathematical formulas, variables, and expressions using LaTeX. Use \(...\) for inline math and $$...$$ for block math.</textarea>
+                </div>
+
+                <div class="mb-4 flex-1 flex flex-col h-[400px]">
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">Course Material (Paste Text)</label>
+                    <p class="text-xs text-slate-500 mb-2">Paste your syllabus, notes, or readings here. The AI will use this to answer.</p>
+                    <textarea id="courseMaterial" class="w-full flex-1 border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono" placeholder="e.g. Course Title: Introduction to Economics. Week 1 covers Supply and Demand..."></textarea>
+                </div>
+                
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4 rounded">
+                    <p class="text-xs text-blue-800"><strong>Note:</strong> Since this is a simple web app without a database, you must paste the text directly here. When you embed this in Canvas LMS, students won't see this panel if you hide it.</p>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-slate-100 border-t border-slate-200">
+                <button onclick="saveSettings()" class="w-full bg-slate-800 text-white py-2 rounded-lg hover:bg-slate-700 transition font-medium text-sm">
+                    Save Knowledge Base
+                </button>
+                <p id="saveStatus" class="text-green-600 text-xs font-bold text-center mt-2 hidden">Saved successfully!</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // System variables
+    const chatBox = document.getElementById('chatBox');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    
+    // Setup variables
+    const teacherPanel = document.getElementById('teacherPanel');
+    const systemPromptInput = document.getElementById('systemPrompt');
+    const courseMaterialInput = document.getElementById('courseMaterial');
+    let aiSystemInstruction = "";
+    
+    // Gemini API Configuration
+    // The environment will automatically inject the API key when left empty.
+    const apiKey = ""; 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    
+    // Conversation history to send to Gemini
+    let chatHistory = [];
+
+    // Initialize Settings on load
+    function initSettings() {
+        // Create some sample default course material so the preview works immediately
+        const sampleMaterial = `Course: Math in Society (NMC Edition) by David Lippman
+Chapter 9: Finance
+
+The Loans Formula is used when making regular payments to pay off a starting balance (like a car loan or mortgage).
+Formula: $$P_0 = d \\left( \\frac{1 - \\left(1 + \\frac{r}{k}\\right)^{-Nk}}{\\frac{r}{k}} \\right)$$
+
+Variables:
+* \\(P_0\\) = The balance in the account at the beginning (the principal, or total amount of the loan).
+* \\(d\\) = Your loan payment (your monthly payment, annual payment, etc.)
+* \\(r\\) = The annual interest rate in decimal form.
+* \\(k\\) = The number of compounding periods in one year (e.g., 12 for monthly).
+* \\(N\\) = The length of the loan, in years.
+
+Important Concept: The difference between the total amount you pay over the life of the loan and the initial loan amount (\\(P_0\\)) is the total INTEREST paid.
+
+TI-84 Numeric Solver Instructions:
+1. Press [MATH], then scroll down or press the UP arrow to select [C:Numeric Solver...] (or B:Solver on older models).
+2. The solver has two boxes: E1 (Equation 1) and E2 (Equation 2).
+3. Set E1 to your P0 variable (you can just type P or X).
+4. Set E2 to the right side of the formula: D*((1-(1+R/K)^(-N*K))/(R/K))
+5. Press [OK] or [ENTER].
+6. You will see a list of all your variables. Enter the values you know. 
+7. Move the cursor to the variable you want to solve for (e.g., D for the payment).
+8. Press [ALPHA] then [ENTER] (which activates the SOLVE command printed above the Enter key).
+9. The calculator will calculate the missing value!
+
+Chapter 1: Problem Solving
+Section 1.2: Percents
+
+Absolute and Relative Change
+
+Given two quantities:
+Absolute change = $$|\\text{ending quantity} - \\text{starting quantity}|$$
+* Absolute change has the same units as the original quantity.
+
+Relative change = $$\\frac{\\text{absolute change}}{\\text{starting quantity}}$$
+* Relative change gives a percent change. The starting quantity is called the base of the percent change.
+
+When computing a percent increase or decrease relative to a starting value, we are calculating the Relative Change.
+
+Note on comparing percents: If a quantity that is already a percent changes (e.g., a politician's support increases from 40% to 50%), the absolute change (10%) is described as an increase of "percentage points". The relative change would be $$\\frac{10\\%}{40\\%} = 25\\%$$ increase.`;
+        
+        courseMaterialInput.value = sampleMaterial;
+        updateSystemInstruction();
+    }
+
+    function updateSystemInstruction() {
+        const persona = systemPromptInput.value;
+        const knowledge = courseMaterialInput.value;
+        
+        aiSystemInstruction = `${persona}\n\nHere is the course material you must base your answers on:\n---\n${knowledge}\n---`;
+    }
+
+    function saveSettings() {
+        updateSystemInstruction();
+        const status = document.getElementById('saveStatus');
+        status.classList.remove('hidden');
+        setTimeout(() => status.classList.add('hidden'), 2000);
+        
+        // Reset chat history when settings change so AI adopts new rules cleanly
+        chatHistory = [];
+        chatBox.innerHTML = '';
+        addMessageToUI("model", "I've updated my knowledge base based on the teacher's new materials. How can I help you study?");
+    }
+
+    function toggleTeacherMode() {
+        if (teacherPanel.classList.contains('hidden')) {
+            teacherPanel.classList.remove('hidden', 'lg:flex');
+            teacherPanel.classList.add('flex', 'absolute', 'inset-0', 'z-50', 'bg-white', 'lg:relative', 'lg:z-auto');
+        } else {
+            teacherPanel.classList.add('hidden', 'lg:flex');
+            teacherPanel.classList.remove('flex', 'absolute', 'inset-0', 'z-50', 'bg-white', 'lg:relative', 'lg:z-auto');
+        }
+    }
+
+    // Basic Markdown formatting helper for chat bubbles
+    function formatMessage(text) {
+        return text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
+            .replace(/\*(.*?)\*/g, '<em>$1</em>');            // Italics (removed BR replacement to preserve LaTeX structure)
+    }
+
+    // Add message bubble to the chat UI
+    function addMessageToUI(sender, text) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex items-start gap-3 ${sender === 'user' ? 'flex-row-reverse' : ''}`;
+        
+        let avatar = '';
+        let bubbleStyle = '';
+        
+        if (sender === 'user') {
+            avatar = `<div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0 text-slate-600 text-sm font-bold">U</div>`;
+            bubbleStyle = 'bg-indigo-600 text-white rounded-tr-none';
+        } else {
+            avatar = `<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 text-lg">🤖</div>`;
+            bubbleStyle = 'bg-indigo-50 text-gray-800 rounded-tl-none';
+        }
+
+        wrapper.innerHTML = `
+            ${avatar}
+            <div class="${bubbleStyle} p-4 rounded-2xl max-w-[85%] shadow-sm overflow-hidden">
+                <p class="leading-relaxed whitespace-pre-wrap">${formatMessage(text)}</p>
+            </div>
+        `;
+        
+        chatBox.appendChild(wrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Trigger MathJax to render LaTeX in the newly added message
+        if (window.MathJax && window.MathJax.typesetPromise) {
+            MathJax.typesetPromise([wrapper]).catch(function (err) {
+                console.error('MathJax rendering error:', err.message);
+            });
+        }
+    }
+
+    // Add the typing indicator
+    function showTypingIndicator() {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'typingIndicator';
+        wrapper.className = `flex items-start gap-3`;
+        wrapper.innerHTML = `
+            <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 text-indigo-600 text-lg">🤖</div>
+            <div class="bg-indigo-50 p-4 rounded-2xl rounded-tl-none flex gap-1 items-center typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        `;
+        chatBox.appendChild(wrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // 1. Display User Message
+        addMessageToUI('user', text);
+        userInput.value = '';
+        userInput.disabled = true;
+        sendBtn.disabled = true;
+
+        // 2. Add to chat history array for API
+        chatHistory.push({ role: "user", parts: [{ text: text }] });
+
+        // 3. Show typing indicator
+        showTypingIndicator();
+
+        // 4. Construct payload for Gemini API
+        const payload = {
+            contents: chatHistory,
+            systemInstruction: {
+                parts: [{ text: aiSystemInstruction }]
+            }
+        };
+
+        try {
+            // 5. Call the API
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+      
