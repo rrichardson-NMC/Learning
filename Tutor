@@ -1,0 +1,47 @@
+# MTH_120_Tutor_Bot.py
+# You can copy this foundational code directly into your GitHub repository.
+
+import os
+from openai import OpenAI
+
+# Initialize your API client (ensure your API key is in your environment variables)
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+def mth120_chat(user_input, conversation_history):
+    """
+    MTH 120 Tutor Bot using the Socratic Method and TI-84 Simulation.
+    """
+    system_prompt = """
+    You are a MTH 120 math tutor. Your primary goals are to use the Socratic method to guide students to answers and to help them navigate their TI-84 calculators. 
+    
+    Rules:
+    1. NEVER give the final answer outright. Ask guiding, step-by-step questions.
+    2. Format all mathematical formulas in LaTeX (e.g., $y = ax + b$).
+    3. Provide TI-84 keystroke simulations (e.g., STAT -> EDIT to enter data, STAT -> CALC -> 4:LinReg(ax+b)).
+    4. Reference the course materials provided, such as "30_Section3.4Key.pdf".
+    """
+    
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.extend(conversation_history)
+    messages.append({"role": "user", "content": user_input})
+    
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+        temperature=0.7
+    )
+    
+    return response.choices[0].message.content
+
+# Example usage loop
+if __name__ == "__main__":
+    history = []
+    print("MTH 120 Tutor: Hello! I'm here to help you with your MTH 120 materials. What are we working on today?")
+    while True:
+        user_text = input("Student: ")
+        if user_text.lower() in ['quit', 'exit']:
+            break
+        reply = mth120_chat(user_text, history)
+        print(f"\nMTH 120 Tutor: {reply}\n")
+        history.append({"role": "user", "content": user_text})
+        history.append({"role": "assistant", "content": reply})
